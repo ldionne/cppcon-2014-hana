@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="author", content="Louis Dionne">
+    <title>Boost.Hana: Unified metaprogramming</title>
+    <link rel="stylesheet" href="css/reveal.min.css">
+    <link rel="stylesheet" href="css/theme/default.css" id="theme">
+    <link rel="stylesheet" href="lib/css/highlight/zenburn.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section data-markdown=""
+                     data-separator="^====+$"
+                     data-vertical="^----+$"
+                     data-notes="^Note:">
+            <script type="text/template">
+
+## Boost.Hana: Unified metaprogramming
+### Louis Dionne, CppCon 2014
+
+====================
+
+## Outline
+- Metaprogramming in C++: state of affairs
+- Boost.Hana
+- What I need for C++1z
+
+==============================================================================
+
+# Part 1
+## Metaprogramming in C++: state of affairs
+
+==============================================================================
+
+# Part 2
+## Boost.Hana
+
+==============================================================================
+
+# Part 3
+## What I need for C++1z
+
+====================
+
+# Thank you
+
+<span class="fragment fade-in" data-fragment-index="1">
+http://ldionne.com <br>
+http://github.com/ldionne
+</span>
+
+            </script>
+            </section>
+        </div>
+    </div>
+
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.min.js"></script>
+    <script>
+        Reveal.initialize({
+            slideNumber: true,
+
+            dependencies: [
+                { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+                { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } },
+                { src: 'plugin/math/math.js', async: true },
+                { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } }
+            ]
+        });
+    </script>
+</body>
+
+</html>
