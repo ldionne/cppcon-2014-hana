@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="author", content="Louis Dionne">
-    <title>Boost.Hana: Unified metaprogramming</title>
+    <title>Hana: Expressive metaprogramming</title>
     <link rel="stylesheet" href="css/reveal.min.css">
     <link rel="stylesheet" href="css/theme/default.css" id="theme">
     <link rel="stylesheet" href="lib/css/highlight/zenburn.css">
@@ -20,30 +20,208 @@
                      data-notes="^Note:">
             <script type="text/template">
 
-## Boost.Hana: Unified metaprogramming
+## Hana: Expressive metaprogramming
 ### Louis Dionne, CppCon 2014
 
 ====================
 
 ## Outline
-- Metaprogramming in C++: state of affairs
-- Boost.Hana
-- What I need for C++1z
+- Motivation
+- C++14: State of affairs
+- Hana
+- Implementation techniques
+- What I need from C++1z
 
 ==============================================================================
 
-# Part 1
-## Metaprogramming in C++: state of affairs
+## Motivation: Why metaprogram?
 
 ==============================================================================
 
-# Part 2
+## C++14: State of affairs
+
+==============================================================================
+
 ## Boost.Hana
 
+====================
+
+## Concepts
+
+----
+
+## Foldable
+Structures that can be linearized
+
+```cpp
+
+```
+
+----
+
+## Iterable
+Structures that can be linearized, one element at a time
+
+```cpp
+
+```
+
+----
+
+## Searchable
+Structures associating keys to values
+
+```cpp
+
+```
+
+----
+
+## List
+Structures isomorphic to `std::tuple`
+
+```cpp
+
+```
+
+----
+
+## Functor
+Structures that can be mapped over
+
+```cpp
+
+```
+
+----
+
+## Comparable
+Objects that can be compared for equality
+
+```cpp
+
+```
+
+----
+
+## Orderable
+Objects admitting a strict weak ordering
+
+```cpp
+
+```
+
+----
+
+## Monoid, Group, Ring, IntegralDomain
+Consistent numeric hierarchy
+
+```cpp
+
+```
+
+----
+
+## There's more
+Applicative, Monad, Traversable, etc..
+
+====================
+
+## Implementation techniques
+
+====================
+
+## Tuple
+
+```cpp
+template <typename ...T>
+/* constexpr */ decltype(auto) make_storage(T&& ...t) {
+    return [t...](auto&& f) -> decltype(auto) {
+        return std::forward<decltype(f)>(f)(t...);
+    };
+}
+
+template <typename ...T>
+struct tuple {
+    using Storage = decltype(make_storage(std::declval<T>()...));
+    Storage storage;
+
+    template <typename ...U>
+    /* constexpr */ explicit tuple(U&& ...u)
+        : storage(make_storage(std::forward<U>(u)...))
+    { };
+};
+```
+
+----
+
+benchmarks
+
+====================
+
+## Random access
+
+```cpp
+struct eat { template <typename ...X> constexpr eat(X&& ...) { } };
+
+template <std::size_t n, typename = std::make_index_sequence<n>>
+struct get_impl;
+
+template <std::size_t n, std::size_t ...ignore>
+struct get_impl<n, std::index_sequence<ignore...>> {
+    template <typename Nth, typename ...Rest>
+    constexpr decltype(auto) operator()
+    (decltype(ignore, eat{})..., Nth&& nth, Rest&& ...) const
+    { return std::forward<Nth>(nth); }
+};
+
+template <std::size_t n, typename Tuple>
+/* constexpr */ decltype(auto) get(Tuple&& ts) {
+    return std::forward<Tuple>(ts).unpack_into(get_impl<n>{});
+}
+```
+
+----
+
+benchmarks
+
+====================
+
+## Function mapping
+
+```cpp
+template <typename Tuple, typename F>
+/* constexpr */ decltype(auto) transform(Tuple&& ts, F&& f) {
+    return std::forward<Tuple>(ts).unpack_into(
+        [f(std::forward<F>(f))](auto&& ...ts) -> decltype(auto) {
+            return make_tuple(f(std::forward<decltype(ts)>(ts))...);
+        }
+    );
+}
+```
+
+----
+
+benchmarks
+
+====================
+
+## Unpacking
+
+```cpp
+template <typename F, typename Tuple>
+/* constexpr */ decltype(auto) apply(F&& f, Tuple&& ts) {
+    return std::forward<Tuple>(ts).unpack_into(std::forward<F>(f));
+}
+```
+
+----
+
+benchmarks
+
 ==============================================================================
 
-# Part 3
-## What I need for C++1z
+## What I need from C++1z
 
 ====================
 
