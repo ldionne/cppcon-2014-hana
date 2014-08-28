@@ -1,0 +1,4 @@
+[submodule "code/hana"]
+	path = code/hana
+	url = http://github.com/ldionne/hana
+	branch = master
