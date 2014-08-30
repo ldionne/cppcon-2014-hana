@@ -3,12 +3,247 @@
 
 #include <boost/hana.hpp>
 
+#include <boost/hana/ext/std/integral_constant.hpp>
+#include <boost/hana/ext/std/tuple.hpp>
+
+#include <cassert>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <type_traits>
+using namespace boost::hana;
+
+
+auto to_s = [](auto x) {
+    return (std::ostringstream{} << x).str();
+};
 
 int main() {
     //////////////////////////////////////////////////////////////////////////
     // Foldable
     //////////////////////////////////////////////////////////////////////////
     {
+        //////////////////
+        // Tuple
+        //////////////////
+        {
+            auto xs = tuple(1, '2', 3.3, std::string{"foo"});
 
+            assert(foldl(xs, std::string{"x"}, [](auto str, auto x) {
+                return "(" + str + " + " +  to_s(x) + ")";
+            }) == "((((x + 1) + 2) + 3.3) + foo)");
+
+            assert(unpack(xs, [](int a, char b, double c, std::string d) {
+                return to_s(a) + " " + to_s(b) + " " + to_s(c) + " " + d;
+            }) == "1 2 3.3 foo");
+
+            assert(count(xs, [](auto x) {
+                return std::is_floating_point<decltype(x)>{};
+            }) == 1);
+        }
+
+        //////////////////
+        // Maybe
+        //////////////////
+        {
+            assert(unpack(nothing, []() { return 0; }) == 0);
+            assert(unpack(just('x'), [](auto x) { return x; }) == 'x');
+
+            assert(sum(just(1)) == 1);
+            assert(sum(nothing) == 0);
+
+            assert(length(nothing) == 0);
+            assert(length(just(nullptr)) == 1);
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Iterable
+    //////////////////////////////////////////////////////////////////////////
+    {
+        //////////////////
+        // Tuple
+        //////////////////
+        {
+            auto xs = tuple(1, '2', 3.3, std::string{"foo"});
+
+            assert(head(xs) == 1);
+
+            assert(last(xs) == "foo");
+
+            assert(at_c<2>(xs) == 3.3);
+
+            assert(drop_until(xs, [](auto x) {
+                return std::is_floating_point<decltype(x)>{};
+            }) == tuple(3.3, "foo"));
+        }
+
+        //////////////////
+        // Range
+        //////////////////
+        {
+            auto r = range_c<int, 10, 20>;
+
+            assert((tail(r) == range_c<int, 11, 20>));
+
+            assert((drop_c<3>(r) == range_c<int, 13, 20>));
+
+            using namespace literals;
+            assert((drop_while(r, _ < 15_c) == range_c<int, 15, 20>));
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Searchable
+    //////////////////////////////////////////////////////////////////////////
+    {
+        //////////////////
+        // Tuple
+        //////////////////
+        {
+            auto xs = tuple(1, '2', 3.3, std::string{"foo"});
+
+            assert(find(xs, [](auto x) {
+                return std::is_floating_point<decltype(x)>{};
+            }) == just(3.3));
+
+            assert(subset(tuple('2', "foo"), xs));
+
+            assert(any(xs, [](auto x) {
+                return std::is_floating_point<decltype(x)>{};
+            }));
+
+            assert(3.3 ^in^ xs); // infix application :-)
+        }
+
+        //////////////////
+        // Map
+        //////////////////
+        {
+            auto xs = map(
+                pair(type<float>, 4),
+                pair(int_<1>, std::string{"foo"})
+            );
+
+            assert(lookup(xs, type<float>) == just(4));
+            assert(lookup(xs, type<char>) == nothing);
+
+            assert(elem(xs, int_<1>));
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // List
+    //////////////////////////////////////////////////////////////////////////
+    {
+        //////////////////
+        // Tuple
+        //////////////////
+        {
+            auto xs = tuple(1, '2', 3.3, std::string{"foo"});
+
+            assert(xs == concat(tuple(1, '2'), tuple(3.3, "foo")));
+
+            assert(reverse(xs) == tuple("foo", 3.3, '2', 1));
+
+            assert((slice_c<1, 3>(xs) == tuple('2', 3.3)));
+
+            assert(take_until(xs, [](auto x) {
+                return std::is_floating_point<decltype(x)>{};
+            }) == tuple(1, '2'));
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Functor
+    //////////////////////////////////////////////////////////////////////////
+    {
+        //////////////////
+        // Tuple
+        //////////////////
+        {
+            auto xs = tuple(1, 3.3, std::string{"foo"});
+
+            assert(fmap(xs, [](auto x) {
+                return x + x;
+            }) == tuple(2, 6.6, "foofoo"));
+
+            assert(adjust(xs,
+                [](auto x) { return std::is_floating_point<decltype(x)>{}; },
+                [](auto x) { return x + x; }
+            ) == tuple(1, 6.6, "foo"));
+        }
+
+        //////////////////
+        // Maybe
+        //////////////////
+        {
+            assert(replace(just(1.3),
+                [](auto x) { return std::is_floating_point<decltype(x)>{}; },
+                'x'
+            ) == just('x'));
+
+            assert(fill(just(1.3), 'x') == just('x'));
+            assert(fill(nothing, 'x') == nothing);
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Comparable
+    //////////////////////////////////////////////////////////////////////////
+    {
+        // Any two Lists
+        assert(equal(tuple(1, '2', 3.3), std::make_tuple(1, '2', 3.3)));
+
+        // Maybes
+        assert(equal(just(1), just(1)));
+        assert(not_equal(just(1), nothing));
+
+        // EqualityComparable types
+        assert(equal(std::string{"foo"}, std::string{"foo"}));
+
+        // and about everything else provided by Hana
+        assert(equal(set(1, '2', 3.3), set(3.3, 1, '2')));
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Orderable
+    //////////////////////////////////////////////////////////////////////////
+    {
+        // IntegralConstants
+        assert(int_<3> < int_<5>);
+        assert((
+            std::integral_constant<long, 10>{} >=
+            std::integral_constant<unsigned, 3>{}
+        ));
+
+        // LessThanComparable types
+        assert(less(1, 3));
+        assert(greater(std::string{"foo"}, std::string{"bar"}));
+
+        // More will be provided when I get the time :-)
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Monoid, Group, Ring, IntegralDomain
+    //////////////////////////////////////////////////////////////////////////
+    {
+        // Monoid
+        assert(zero<int> == 0);
+        assert(zero<Integral> == int_<0>);
+        assert(int_<3> + int_<5> == int_<8>);
+
+        // Group
+        assert(int_<3> - int_<7> == int_<-4>);
+        assert(-int_<3> == int_<-3>);
+
+        // Ring
+        assert(one<long> == 1l);
+        assert(one<Integral> == int_<1>);
+        assert(int_<2> * int_<4> == int_<8>);
+
+        // IntegralDomain
+        assert(int_<6> % int_<3> == int_<0>);
+        assert(int_<6> / int_<3> == int_<2>);
     }
 }
