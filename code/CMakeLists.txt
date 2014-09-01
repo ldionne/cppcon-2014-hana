@@ -24,20 +24,16 @@ append_flag(CXX_FLAGS HAS_PEDANTIC_FLAG                  -pedantic)
 add_definitions(${CXX_FLAGS})
 include_directories(hana/include)
 
-#=============================================================================
-# Search for packages.
-#=============================================================================
-find_package(Boost)
-find_package(Doxygen)
-
 
 #=============================================================================
 # Setup targets
 #=============================================================================
 enable_testing()
 
-add_executable(tuple tuple.cpp)
-add_test(tuple tuple)
+add_executable(lambda_tuple lambda_tuple.cpp)
+add_test(lambda_tuple lambda_tuple)
 
 add_executable(concepts concepts.cpp)
 add_test(concepts concepts)
+
+add_subdirectory(benchmark)
