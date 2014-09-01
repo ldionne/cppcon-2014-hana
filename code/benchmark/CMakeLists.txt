@@ -146,7 +146,7 @@ endfunction()
 
 ##############################################################################
 
-foreach(operation IN ITEMS apply get make_tuple transform)
+foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform)
     foreach(technique IN ITEMS lambda_tuple std_tuple)
         boost_hana_add_curve_from_source(benchmark.${operation} ${technique} ${operation}.cpp
             "

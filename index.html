@@ -305,11 +305,11 @@ Applicative, Monad, Traversable, etc..
 
 ====================
 
-## Tuple
+`std::tuple`
 
 ```cpp
 template <typename ...T>
-/* constexpr */ decltype(auto) make_storage(T&& ...t) {
+/* constexpr */ decltype(auto) make_storage(T ...t) {
     return [t...](auto&& f) -> decltype(auto) {
         return std::forward<decltype(f)>(f)(t...);
     };
@@ -318,14 +318,18 @@ template <typename ...T>
 template <typename ...T>
 struct tuple {
     using Storage = decltype(make_storage(std::declval<T>()...));
-    Storage storage;
+    Storage unpack_into;
 
     template <typename ...U>
     /* constexpr */ explicit tuple(U&& ...u)
-        : storage(make_storage(std::forward<U>(u)...))
+        : unpack_into(make_storage(std::forward<U>(u)...))
     { };
 };
 ```
+
+Note:
+We should move-capture with `t{std::move(t)}...` in `make_storage`, but this
+fails on both Clang and GCC.
 
 ----
 
@@ -339,7 +343,7 @@ struct tuple {
 
 ====================
 
-## Random access
+`std::get`
 
 ```cpp
 struct eat { template <typename ...X> constexpr eat(X&& ...) { } };
@@ -373,32 +377,36 @@ template <std::size_t n, typename Tuple>
 
 ====================
 
-## Function mapping
+`std::tuple_cat`
 
 ```cpp
-template <typename Tuple, typename F>
-/* constexpr */ decltype(auto) transform(Tuple&& ts, F&& f) {
-    return std::forward<Tuple>(ts).unpack_into(
-        [f(std::forward<F>(f))](auto&& ...ts) -> decltype(auto) {
-            return make_tuple(f(std::forward<decltype(ts)>(ts))...);
-        }
-    );
+template <typename Xs, typename Ys>
+/* constexpr */ auto tuple_cat(Xs xs, Ys ys) {
+    return xs.unpack_into([=](auto ...x) {
+        return ys.unpack_into([=](auto ...y) {
+            return make_tuple(x..., y...);
+        });
+    });
 }
 ```
+
+Note:
+Perfect forwarding left out for readability, and also because it is very
+tricky to implement.
 
 ----
 
 ## Time
-![](code/benchmark/plots/benchmark.transform.time.png)
+![](code/benchmark/plots/benchmark.tuple_cat.time.png)
 
 ----
 
 ## Memory usage
-![](code/benchmark/plots/benchmark.transform.memusg.png)
+![](code/benchmark/plots/benchmark.tuple_cat.memusg.png)
 
 ====================
 
-## Unpacking
+The proposed `std::apply`
 
 ```cpp
 template <typename F, typename Tuple>
@@ -416,6 +424,31 @@ template <typename F, typename Tuple>
 
 ## Memory usage
 ![](code/benchmark/plots/benchmark.apply.memusg.png)
+
+====================
+
+An hypothetical `std::tuple_transform`
+
+```cpp
+template <typename Tuple, typename F>
+/* constexpr */ decltype(auto) tuple_transform(Tuple&& ts, F&& f) {
+    return std::forward<Tuple>(ts).unpack_into(
+        [f(std::forward<F>(f))](auto&& ...ts) -> decltype(auto) {
+            return make_tuple(f(std::forward<decltype(ts)>(ts))...);
+        }
+    );
+}
+```
+
+----
+
+## Time
+![](code/benchmark/plots/benchmark.tuple_transform.time.png)
+
+----
+
+## Memory usage
+![](code/benchmark/plots/benchmark.tuple_transform.memusg.png)
 
 ==============================================================================
 

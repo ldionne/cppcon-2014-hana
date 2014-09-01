@@ -10,7 +10,7 @@ int main() {
         <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
     );
 
-    transform(xs, [](auto x) {
+    tuple_transform(xs, [](auto x) {
         return x;
     });
 }
