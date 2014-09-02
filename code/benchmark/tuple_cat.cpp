@@ -1,5 +1,8 @@
 
-#include "../<%=technique%>.hpp"
+#include "../lambda_tuple.hpp"
+#include "../std_tuple.hpp"
+
+<%= setup %>
 
 
 template <int i>
@@ -9,13 +12,22 @@ template <int i>
 struct y { };
 
 int main() {
-    auto xs = make_tuple(
+    other::make_tuple(
         <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
     );
 
-    auto ys = make_tuple(
+    other::make_tuple(
         <%= (1..n_elements).to_a.map{ |i| "y<#{i}>{}" }.join(',') %>
     );
 
-    tuple_cat(xs, ys);
+
+    auto xs = benchmark::make_tuple(
+        <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
+    );
+
+    auto ys = benchmark::make_tuple(
+        <%= (1..n_elements).to_a.map{ |i| "y<#{i}>{}" }.join(',') %>
+    );
+
+    benchmark::tuple_cat(xs, ys);
 }

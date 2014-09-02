@@ -1,14 +1,23 @@
 
-#include "../<%=technique%>.hpp"
+#include "../lambda_tuple.hpp"
+#include "../std_tuple.hpp"
+
+<%= setup %>
 
 
 template <int i>
 struct x { };
 
 int main() {
-    auto xs = make_tuple(
+    other::make_tuple(
         <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
     );
-    auto f = [](auto ...x) { };
-    apply(f, xs);
+
+    auto xs = benchmark::make_tuple(
+        <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
+    );
+
+    <% 10.times do %>
+        benchmark::apply([](auto ...x) { }, xs);
+    <% end %>
 }

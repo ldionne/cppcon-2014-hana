@@ -147,13 +147,33 @@ endfunction()
 ##############################################################################
 
 foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform)
-    foreach(technique IN ITEMS lambda_tuple std_tuple)
-        boost_hana_add_curve_from_source(benchmark.${operation} ${technique} ${operation}.cpp
-            "
-            ((0..50).to_a + (51..500).step(25).to_a).map { |n|
-                { technique: '${technique}', n_elements: n, x: n }
+    boost_hana_add_curve_from_source(benchmark.${operation} lambda_tuple ${operation}.cpp
+        "
+        ((0..50).to_a + (51..500).step(25).to_a).map { |n|
+            {
+                setup: \"
+                    namespace benchmark = lambda;
+                    namespace other = standard;
+                \",
+                n_elements: n,
+                x: n
             }
-            "
-        )
-    endforeach()
+        }
+        "
+    )
+
+    boost_hana_add_curve_from_source(benchmark.${operation} std_tuple ${operation}.cpp
+        "
+        ((0..50).to_a + (51..500).step(25).to_a).map { |n|
+            {
+                setup: \"
+                    namespace benchmark = standard;
+                    namespace other = lambda;
+                \",
+                n_elements: n,
+                x: n
+            }
+        }
+        "
+    )
 endforeach()
