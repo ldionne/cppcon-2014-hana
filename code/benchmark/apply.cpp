@@ -9,15 +9,20 @@ template <int i>
 struct x { };
 
 int main() {
-    other::make_tuple(
-        <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
-    );
+    <% if no_bias %>
+        other::make_tuple(
+            <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
+        );
+    <% end %>
 
     auto xs = benchmark::make_tuple(
         <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
     );
 
     <% 10.times do %>
-        benchmark::apply([](auto ...x) { }, xs);
+    {
+        auto f = [](auto ...x) { };
+        benchmark::apply(f, xs);
+    }
     <% end %>
 }

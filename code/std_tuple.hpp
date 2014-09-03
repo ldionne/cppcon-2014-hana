@@ -50,7 +50,7 @@ constexpr decltype(auto) tuple_transform(Tuple&& ts, F&& f) {
 //////////////////////////////////////////////////////////////////////////////
 template <typename F, typename Tuple, std::size_t ...i>
 constexpr decltype(auto) apply_impl(F&& f, Tuple&& ts, std::index_sequence<i...>) {
-    return f(get<i>(std::forward<Tuple>(ts))...);
+    return std::forward<F>(f)(get<i>(std::forward<Tuple>(ts))...);
 }
 
 template <typename F, typename Tuple>

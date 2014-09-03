@@ -9,16 +9,16 @@ template <int i>
 struct x { };
 
 int main() {
-    other::make_tuple(
-        <%= (1..n_elements+1).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
-    );
+    <% if no_bias %>
+        other::make_tuple(
+            <%= (1..n_elements+1).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
+        );
+    <% end %>
 
     auto xs = benchmark::make_tuple(
         // Make sure we use a non-empty tuple.
         <%= (1..n_elements+1).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
     );
 
-    <% (0..n_elements).each do |i| %>
-        benchmark::get< <%=i%> >(xs);
-    <% end %>
+    benchmark::get< <%=n_elements/2%> >(xs);
 }

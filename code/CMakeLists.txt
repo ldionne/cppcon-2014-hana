@@ -36,4 +36,10 @@ add_test(lambda_tuple lambda_tuple)
 add_executable(concepts concepts.cpp)
 add_test(concepts concepts)
 
+add_executable(expression_templates expression_templates.cpp)
+add_test(expression_templates expression_templates)
+
+add_executable(loop_unrolling loop_unrolling.cpp)
+add_test(loop_unrolling loop_unrolling)
+
 add_subdirectory(benchmark)

@@ -12,13 +12,15 @@ template <int i>
 struct y { };
 
 int main() {
-    other::make_tuple(
-        <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
-    );
+    <% if no_bias %>
+        other::make_tuple(
+            <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
+        );
 
-    other::make_tuple(
-        <%= (1..n_elements).to_a.map{ |i| "y<#{i}>{}" }.join(',') %>
-    );
+        other::make_tuple(
+            <%= (1..n_elements).to_a.map{ |i| "y<#{i}>{}" }.join(',') %>
+        );
+    <% end %>
 
 
     auto xs = benchmark::make_tuple(

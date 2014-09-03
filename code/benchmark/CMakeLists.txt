@@ -147,6 +147,7 @@ endfunction()
 ##############################################################################
 
 foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform)
+    # Biased benchmarks
     boost_hana_add_curve_from_source(benchmark.${operation} lambda_tuple ${operation}.cpp
         "
         ((0..50).to_a + (51..500).step(25).to_a).map { |n|
@@ -156,7 +157,8 @@ foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform)
                     namespace other = standard;
                 \",
                 n_elements: n,
-                x: n
+                x: n,
+                no_bias: false
             }
         }
         "
@@ -171,7 +173,42 @@ foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform)
                     namespace other = lambda;
                 \",
                 n_elements: n,
-                x: n
+                x: n,
+                no_bias: false
+            }
+        }
+        "
+    )
+
+
+    # Unbiased benchmarks
+    boost_hana_add_curve_from_source(benchmark.${operation}.unbiased lambda_tuple_unbiased ${operation}.cpp
+        "
+        ((0..50).to_a + (51..500).step(25).to_a).map { |n|
+            {
+                setup: \"
+                    namespace benchmark = lambda;
+                    namespace other = standard;
+                \",
+                n_elements: n,
+                x: n,
+                no_bias: true
+            }
+        }
+        "
+    )
+
+    boost_hana_add_curve_from_source(benchmark.${operation}.unbiased std_tuple_unbiased ${operation}.cpp
+        "
+        ((0..50).to_a + (51..500).step(25).to_a).map { |n|
+            {
+                setup: \"
+                    namespace benchmark = standard;
+                    namespace other = lambda;
+                \",
+                n_elements: n,
+                x: n,
+                no_bias: true
             }
         }
         "
