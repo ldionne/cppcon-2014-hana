@@ -39,7 +39,9 @@ add_test(concepts concepts)
 add_executable(expression_templates expression_templates.cpp)
 add_test(expression_templates expression_templates)
 
-add_executable(loop_unrolling loop_unrolling.cpp)
+# We make sure everything possible is inlined by using -O3
+set_source_files_properties(loop_unrolling.cpp PROPERTIES COMPILE_FLAGS -O3)
+add_executable(loop_unrolling loop_unrolling.cpp loop_unrolling_link.cpp)
 add_test(loop_unrolling loop_unrolling)
 
 add_subdirectory(benchmark)

@@ -26,15 +26,15 @@
 ====================
 
 ## Outline
-- Motivation
+- Motivating examples
 - Concepts
-- Examples
+- Type/value unification
 - Implementation techniques
 - What I need from C++1z
 
 ==============================================================================
 
-## Motivation
+## Motivating examples
 
 ====================
 
@@ -52,65 +52,75 @@ to be expanded at compile-time
 ----
 
 ```cpp
-void f(); // <- can't be inlined
+auto unroll = [](auto n, auto&& f) {
+    boost::hana::for_each(boost::hana::range(boost::hana::int_<0>, n),
+        [f(std::forward<decltype(f)>(f))](auto i) { f(); }
+    );
+};
+
+void f(); // can't be inlined
 
 int main() {
-    boost::hana::int_<10>.times(f);
+    unroll(boost::hana::int_<10>, f);
 }
 ```
 
 ----
 
+## Generated asm with -O3
+
 ```asm
-_main:                                  ## @main
-    .cfi_startproc
-## BB#0:                                ## %entry
-    push    rbp
-Ltmp0:
-    .cfi_def_cfa_offset 16
-Ltmp1:
-    .cfi_offset rbp, -16
-    mov rbp, rsp
-Ltmp2:
-    .cfi_def_cfa_register rbp
-    call    __Z11not_inlinedv
-    call    __Z11not_inlinedv
-    call    __Z11not_inlinedv
-    call    __Z11not_inlinedv
-    call    __Z11not_inlinedv
-    call    __Z11not_inlinedv
-    call    __Z11not_inlinedv
-    call    __Z11not_inlinedv
-    call    __Z11not_inlinedv
-    call    __Z11not_inlinedv
-    xor eax, eax
-    pop rbp
-    ret
-    .cfi_endproc
+_main:
+    # <snip>
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    xorl    %eax, %eax
+    popq    %rbp
+    retq
 ```
 
 ====================
 
 ## Expression templates
 
-...
+TODO: Show a typical use case
 
 ====================
 
 ## Type computations
 
+TODO: Show a typical use case
+
+====================
+
+## There's a lot more
+
+- Compile-time task scheduling (requires a compile-time graph)
+-
+
+
 ====================
 
 ## What's the problem?
-The standard lacks proper tools:
+
+The standard lacks proper tools
+
 - `std::integer_sequence` is too low level
-- `std::tuple` compiles slowly
-- no algorithms on `std::tuple`s
-- no standard way to do type-level computations
+- `std::tuple` compiles slowly and provides little functionality
+- No standard way to do type-level computations
 
 ====================
 
 ## Hana
+
 - Unifies type-level and value-level metaprogramming
 - Better compile-time performance
 - Expressive and very complete interface
@@ -365,9 +375,13 @@ Applicative, Monad, Traversable, etc..
 
 ==============================================================================
 
-## Examples
+## Type/value unification
 
-<!-- TODO -->
+====================
+
+## It's actually pretty simple
+
+TODO: Explain how it's done.
 
 ==============================================================================
 
@@ -564,13 +578,48 @@ template <typename Tuple, typename F>
 
 ## What I need from C++1z
 
-<!--
-TODO:
-- constexpr lambdas
-- Lambdas in unevaluated contexts, but I _really_ don't care about
-    1. Deep SFINAE (if I understood well).
-    2. Lambdas in symbols with external linkage.
--->
+====================
+
+### Constexpr lambdas
+
+```cpp
+constexpr auto inc = [](auto x) {
+    return x + 1;
+};
+
+static_assert(inc(1) == 2, "");
+```
+
+====================
+
+### Lambdas in some unevaluated contexts
+
+```cpp
+using T = decltype(
+    head(
+        fmap(tuple(type<int>, type<char>, type<float>), [](auto t) {
+            return type<typename decltype(t)::type**>;
+        })
+    )
+)::type;
+```
+
+Note:
+Specifically, explain that I don't care about
+1. Deep SFINAE (if I understood well that this is an issue).
+2. Lambdas in symbols with external linkage.
+
+====================
+
+### Better handling of parameter packs in captures
+
+```cpp
+auto f = [](auto ...x) {
+    auto g = [y(x)...] {
+        // y should be a parameter pack
+    };
+};
+```
 
 ====================
 
