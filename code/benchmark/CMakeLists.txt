@@ -182,7 +182,7 @@ foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform)
 
 
     # Unbiased benchmarks
-    boost_hana_add_curve_from_source(benchmark.${operation}.unbiased lambda_tuple_unbiased ${operation}.cpp
+    boost_hana_add_curve_from_source(benchmark.${operation}.unbiased lambda_tuple ${operation}.cpp
         "
         ((0..50).to_a + (51..500).step(25).to_a).map { |n|
             {
@@ -198,7 +198,7 @@ foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform)
         "
     )
 
-    boost_hana_add_curve_from_source(benchmark.${operation}.unbiased std_tuple_unbiased ${operation}.cpp
+    boost_hana_add_curve_from_source(benchmark.${operation}.unbiased std_tuple ${operation}.cpp
         "
         ((0..50).to_a + (51..500).step(25).to_a).map { |n|
             {

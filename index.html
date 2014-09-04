@@ -26,19 +26,22 @@
 ====================
 
 ## Outline
-- Motivating examples
-- Concepts
+- Why metaprogram?
+- Hana's building blocks
 - Type/value unification
 - Implementation techniques
+- Case studies
 - What I need from C++1z
+
+<!-- TODO: reduce this; list is too long -->
 
 ==============================================================================
 
-## Motivating examples
+## Why metaprogram?
 
 ====================
 
-## Loop unrolling
+### Loop unrolling
 
 Given a function `f`, we want
 ```cpp
@@ -49,94 +52,91 @@ f();
 ```
 to be expanded at compile-time
 
-----
+====================
+
+### Expression templates
+
+We build a tree out of a C++ expression
 
 ```cpp
-auto unroll = [](auto n, auto&& f) {
-    boost::hana::for_each(boost::hana::range(boost::hana::int_<0>, n),
-        [f(std::forward<decltype(f)>(f))](auto i) { f(); }
-    );
-};
+Matrix a = ...;
+Matrix b = ...;
 
-void f(); // can't be inlined
-
-int main() {
-    unroll(boost::hana::int_<10>, f);
-}
+auto sum = a + b;  // returns a lazy expression; nothing computed yet
 ```
 
 ----
 
-## Generated asm with -O3
+... and then perform domain-specific optimizations at compile-time by
+modifying that tree.
 
-```asm
-_main:
-    # <snip>
-    callq   __Z1fv
-    callq   __Z1fv
-    callq   __Z1fv
-    callq   __Z1fv
-    callq   __Z1fv
-    callq   __Z1fv
-    callq   __Z1fv
-    callq   __Z1fv
-    callq   __Z1fv
-    callq   __Z1fv
-    xorl    %eax, %eax
-    popq    %rbp
-    retq
+```cpp
+int i = sum[3][5]; // only computes a[3][5] + b[3][5]
 ```
 
+----
+
+### Good luck implementing that from scratch
+
 ====================
 
-## Expression templates
+### Type computations
 
 TODO: Show a typical use case
 
 ====================
 
-## Type computations
+### There's more
 
-TODO: Show a typical use case
+- Compile-time task ordering/parallelization
+- Dimensional analysis
+- etc...
 
 ====================
 
-## There's a lot more
-
-- Compile-time task scheduling (requires a compile-time graph)
--
-
+### Granted, it's mostly for library writers
 
 ====================
 
 ## What's the problem?
 
-The standard lacks proper tools
+----
 
-- `std::integer_sequence` is too low level
-- `std::tuple` compiles slowly and provides little functionality
-- No standard way to do type-level computations
+### The standard lacks proper tools
+
+<ul>
+    <li>`std::integer_sequence` is too low level</li> <!-- .element: class="fragment" -->
+    <li>`std::tuple` compiles slowly</li> <!-- .element: class="fragment" -->
+    <li>No high-level algorithms on `std::tuple`s</li> <!-- .element: class="fragment" -->
+    <li>No standard way to do type-level computations</li> <!-- .element: class="fragment" -->
+</ul>
 
 ====================
+
+## I need a solution
+
+----
 
 ## Hana
 
-- Unifies type-level and value-level metaprogramming
-- Better compile-time performance
-- Expressive and very complete interface
+<ul>
+    <li>Expressive and very complete interface</li> <!-- .element: class="fragment" -->
+    <li>Better compile-time performance</li> <!-- .element: class="fragment" -->
+    <li>Unifies type-level and value-level metaprogramming</li> <!-- .element: class="fragment" -->
+</ul>
 
 ==============================================================================
 
-## Concepts
+## Hana's building blocks
 
 ====================
 
-## Foldable
+### Foldable
 Structures that can be linearized
 
 ----
 
-## Tuple
+### Tuple
 
 ```cpp
 auto xs = tuple(1, '2', 3.3, std::string{"foo"});
@@ -156,7 +156,7 @@ assert(count(xs, [](auto x) {
 
 ----
 
-## Maybe
+### Maybe
 
 ```cpp
 assert(unpack(nothing, []() { return 0; }) == 0);
@@ -171,12 +171,12 @@ assert(length(just(nullptr)) == 1);
 
 ====================
 
-## Iterable
+### Iterable
 Structures that can be linearized, one element at a time
 
 ----
 
-## Tuple
+### Tuple
 
 ```cpp
 auto xs = tuple(1, '2', 3.3, std::string{"foo"});
@@ -194,7 +194,7 @@ assert(drop_until(xs, [](auto x) {
 
 ----
 
-## Range
+### Range
 
 ```cpp
 auto r = range_c<int, 10, 20>;
@@ -209,12 +209,12 @@ assert((drop_while(r, _ < 15_c) == range_c<int, 15, 20>));
 
 ====================
 
-## Searchable
+### Searchable
 Structures associating keys to values
 
 ----
 
-## Tuple
+### Tuple
 
 ```cpp
 auto xs = tuple(1, '2', 3.3, std::string{"foo"});
@@ -234,7 +234,7 @@ assert(3.3 ^in^ xs); // infix application :-)
 
 ----
 
-## Map
+### Map
 
 ```cpp
 auto xs = map(
@@ -250,7 +250,7 @@ assert(elem(xs, int_<1>));
 
 ====================
 
-## List
+### List
 Structures isomorphic to `std::tuple`
 
 ```cpp
@@ -269,12 +269,12 @@ assert(take_until(xs, [](auto x) {
 
 ====================
 
-## Functor
+### Functor
 Structures that can be mapped over
 
 ----
 
-## Tuple
+### Tuple
 
 ```cpp
 auto xs = tuple(1, 3.3, std::string{"foo"});
@@ -291,7 +291,7 @@ assert(adjust(xs,
 
 ----
 
-## Maybe
+### Maybe
 
 ```cpp
 assert(replace(just(1.3),
@@ -305,7 +305,7 @@ assert(fill(nothing, 'x') == nothing);
 
 ====================
 
-## Comparable
+### Comparable
 Objects that can be compared for equality
 
 ```cpp
@@ -325,7 +325,7 @@ assert(equal(set(1, '2', 3.3), set(3.3, 1, '2')));
 
 ====================
 
-## Orderable
+### Orderable
 Objects admitting a strict weak ordering
 
 ```cpp
@@ -345,7 +345,7 @@ assert(greater(std::string{"foo"}, std::string{"bar"}));
 
 ====================
 
-## Monoid, Group, Ring, IntegralDomain
+### Monoid, Group, Ring, Integral Domain
 Consistent numeric hierarchy
 
 ```cpp
@@ -370,7 +370,7 @@ assert(int_<6> / int_<3> == int_<2>);
 
 ====================
 
-## There's more
+### There's more
 Applicative, Monad, Traversable, etc..
 
 ==============================================================================
@@ -379,9 +379,71 @@ Applicative, Monad, Traversable, etc..
 
 ====================
 
-## It's actually pretty simple
+### It's actually pretty simple
 
 TODO: Explain how it's done.
+
+==============================================================================
+
+## Case studies
+
+====================
+
+### Loop unrolling revisited
+
+```cpp
+auto unroll = [](auto n, auto&& f) {
+    boost::hana::for_each(boost::hana::range(boost::hana::int_<0>, n),
+        [f(std::forward<decltype(f)>(f))](auto i) { f(); }
+    );
+};
+
+void f(); // can't be inlined
+
+int main() {
+    unroll(boost::hana::int_<10>, f);
+}
+```
+
+----
+
+### Generated asm with -O3
+
+```asm
+_main:
+    # <snip>
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    callq   __Z1fv
+    xorl    %eax, %eax
+    popq    %rbp
+    retq
+```
+
+====================
+
+### Expression templates revisited
+
+TODO
+
+====================
+
+### Type computations revisited
+
+TODO
+
+====================
+
+### Heterogeneous linear algebra
+
+TODO
 
 ==============================================================================
 
@@ -417,12 +479,12 @@ fails on both Clang and GCC.
 
 ----
 
-## Time
+### Time
 ![](code/benchmark/plots/benchmark.make_tuple.time.png)
 
 ----
 
-## Memory usage
+### Memory usage
 ![](code/benchmark/plots/benchmark.make_tuple.memusg.png)
 
 ====================
@@ -451,22 +513,22 @@ template <std::size_t n, typename Tuple>
 
 ----
 
-## Time (biased)
+### Time (biased)
 ![](code/benchmark/plots/benchmark.get.time.png)
 
 ----
 
-## Memory usage (biased)
+### Memory usage (biased)
 ![](code/benchmark/plots/benchmark.get.memusg.png)
 
 ----
 
-## Time (unbiased)
+### Time (unbiased)
 ![](code/benchmark/plots/benchmark.get.unbiased.time.png)
 
 ----
 
-## Memory usage (unbiased)
+### Memory usage (unbiased)
 ![](code/benchmark/plots/benchmark.get.unbiased.memusg.png)
 
 ====================
@@ -490,22 +552,22 @@ tricky to implement.
 
 ----
 
-## Time (biased)
+### Time (biased)
 ![](code/benchmark/plots/benchmark.tuple_cat.time.png)
 
 ----
 
-## Memory usage (biased)
+### Memory usage (biased)
 ![](code/benchmark/plots/benchmark.tuple_cat.memusg.png)
 
 ----
 
-## Time (unbiased)
+### Time (unbiased)
 ![](code/benchmark/plots/benchmark.tuple_cat.unbiased.time.png)
 
 ----
 
-## Memory usage (unbiased)
+### Memory usage (unbiased)
 ![](code/benchmark/plots/benchmark.tuple_cat.unbiased.memusg.png)
 
 ====================
@@ -521,22 +583,22 @@ template <typename F, typename Tuple>
 
 ----
 
-## Time (biased)
+### Time (biased)
 ![](code/benchmark/plots/benchmark.apply.time.png)
 
 ----
 
-## Memory usage (biased)
+### Memory usage (biased)
 ![](code/benchmark/plots/benchmark.apply.memusg.png)
 
 ----
 
-## Time (unbiased)
+### Time (unbiased)
 ![](code/benchmark/plots/benchmark.apply.unbiased.time.png)
 
 ----
 
-## Memory usage (unbiased)
+### Memory usage (unbiased)
 ![](code/benchmark/plots/benchmark.apply.unbiased.memusg.png)
 
 ====================
@@ -556,22 +618,22 @@ template <typename Tuple, typename F>
 
 ----
 
-## Time (biased)
+### Time (biased)
 ![](code/benchmark/plots/benchmark.tuple_transform.time.png)
 
 ----
 
-## Memory usage (biased)
+### Memory usage (biased)
 ![](code/benchmark/plots/benchmark.tuple_transform.memusg.png)
 
 ----
 
-## Time (unbiased)
+### Time (unbiased)
 ![](code/benchmark/plots/benchmark.tuple_transform.unbiased.time.png)
 
 ----
 
-## Memory usage (unbiased)
+### Memory usage (unbiased)
 ![](code/benchmark/plots/benchmark.tuple_transform.unbiased.memusg.png)
 
 ==============================================================================
