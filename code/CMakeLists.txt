@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
+find_package(Boost)
 
 #=============================================================================
 # Setup compiler flags
@@ -38,6 +39,16 @@ add_test(concepts concepts)
 
 add_executable(expression_templates expression_templates.cpp)
 add_test(expression_templates expression_templates)
+
+add_executable(type_computations type_computations.cpp)
+add_test(type_computations type_computations)
+
+if (${Boost_FOUND})
+    add_executable(type_value_unification type_value_unification.cpp)
+    add_test(type_value_unification type_value_unification)
+else()
+    message(STATUS "The Boost headers were not found; the `type_value_unification` target won't be available.")
+endif()
 
 # We make sure everything possible is inlined by using -O3
 set_source_files_properties(loop_unrolling.cpp PROPERTIES COMPILE_FLAGS -O3)

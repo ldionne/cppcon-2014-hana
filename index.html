@@ -82,7 +82,31 @@ int i = sum[3][5]; // only computes a[3][5] + b[3][5]
 
 ### Type computations
 
-TODO: Show a typical use case
+Typically, given a sequence of types, we want to
+
+----
+
+... query something about them
+
+```cpp
+template <typename ...T>
+struct smallest {
+    using type = /* give me the T with the smallest size */;
+};
+```
+
+----
+
+... synthetize something from them
+
+```cpp
+template <typename ...T>
+struct optimize_alignment {
+    using type = /*
+        what's the declaration order minimizing alignment requirements?
+    */;
+};
+```
 
 ====================
 
@@ -377,11 +401,106 @@ Applicative, Monad, Traversable, etc..
 
 ## Type/value unification
 
-====================
+----
 
-### It's actually pretty simple
+### Type to value
 
-TODO: Explain how it's done.
+```cpp
+template <typename T>
+struct type_wrapper {
+    // ...
+};
+
+template <typename T>
+type_wrapper<T> type{};
+
+auto the_int_type = type<int>;
+```
+
+----
+
+### Value to type
+
+```cpp
+template <typename T>
+struct type_wrapper {
+    using type = T;
+};
+
+using the_real_int_type = decltype(the_int_type)::type;
+```
+
+----
+
+### Metafunctions become functions!
+
+```cpp
+auto add_pointer = [](auto t) {
+    using T = typename decltype(t)::type;
+    return type<std::add_pointer_t<T>>;
+};
+```
+
+----
+
+### The generic lifting process
+
+... for metafunctions
+
+```cpp
+template <template <typename ...> class f>
+auto metafunction = [](auto ...t) {
+    return type<
+        typename f<typename decltype(t)::type...>::type
+    >;
+};
+
+auto int_pointer = metafunction<std::add_pointer>(type<int>);
+
+static_assert(std::is_same<
+    decltype(int_pointer)::type, int*
+>::value, "");
+```
+
+----
+
+... for metafunction classes
+
+```cpp
+template <typename f>
+auto metafunction_class = [](auto ...t) {
+    return type<
+        typename f::template apply<typename decltype(t)::type...>::type
+    >;
+};
+
+using add_pointer = boost::mpl::quote1<std::add_pointer>;
+auto int_pointer = metafunction_class<add_pointer>(type<int>);
+
+static_assert(std::is_same<
+    decltype(int_pointer)::type, int*
+>::value, "");
+```
+
+----
+
+... for templates
+
+```cpp
+template <template <typename ...> class f>
+auto template_ = [](auto ...t) {
+    return type<
+        f<typename decltype(t)::type...>
+    >;
+};
+
+auto some_tuple = template_<std::tuple>(type<int>, type<char>);
+
+static_assert(std::is_same<
+    decltype(some_tuple)::type,
+    std::tuple<int, char>
+>::value, "");
+```
 
 ==============================================================================
 
@@ -437,13 +556,170 @@ TODO
 
 ### Type computations revisited
 
-TODO
+Find out the smallest type
+
+```cpp
+template <typename ...T>
+using smallest = decltype(
+    minimum_by(ordering(sizeof_), tuple(type<T>...))
+);
+
+template <int i>
+struct storage { char s[i]; };
+
+static_assert(std::is_same<
+    smallest<storage<3>, storage<1>, storage<2>>::type,
+    storage<1>
+>::value, "");
+```
+
+----
+
+Determine the optimal order to minimize alignment
+
+```cpp
+template <typename ...T>
+auto optimize_alignment = sort_by(
+    greater ^on^ trait<std::alignment_of>, tuple(type<T>...)
+);
+
+BOOST_HANA_CONSTANT_ASSERT(
+    optimize_alignment<int, char, long double>
+    ==
+    tuple(type<long double>, type<int>, type<char>)
+);
+```
+
+----
+
+... and eventually do something useful with those types
+
+```cpp
+using OptimalTuple = decltype(
+    unpack(
+        optimize_alignment<int, char, long double>,
+        template_<std::tuple>
+    )
+)::type;
+
+static_assert(std::is_same<
+    OptimalTuple, std::tuple<long double, int, char>
+>::value, "");
+```
 
 ====================
 
-### Heterogeneous linear algebra
+### Heterogeneous matrices
 
-TODO
+First, define how a matrix is represented
+
+```cpp
+template <unsigned Rows, unsigned Columns>
+struct Matrix {
+    // ...
+};
+
+template <unsigned Rows, unsigned Columns, typename Storage>
+struct matrix_type {
+    using hana_datatype = Matrix<Rows, Columns>;
+    Storage rows_;
+
+    // ...
+};
+
+auto rows = [](auto&& m) -> decltype(auto) {
+    return std::forward<decltype(m)>(m).rows_;
+};
+```
+
+----
+
+Then, define how a matrix is created
+
+```cpp
+auto row = tuple;
+
+auto matrix = [](auto&& ...rows) -> decltype(auto) {
+    auto storage = tuple(std::forward<decltype(rows)>(rows)...);
+    auto ncolumns = length(head(storage));
+
+    return matrix_type<
+        sizeof...(rows), value(ncolumns), decltype(storage)
+    >{std::move(storage)};
+};
+
+// Now use like:
+auto m = matrix(
+    row(1,  'x', "foobar"),
+    row(3.3, 4,   5)
+);
+```
+
+----
+
+Define element-wise operations
+
+```cpp
+auto element_wise = [](auto&& f) -> decltype(auto) {
+    return [f(std::forward<decltype(f)>(f))](auto&& ...m) -> decltype(auto) {
+        return unpack(
+            zip_with(partial(zip_with, f),
+                rows(std::forward<decltype(m)>(m))...
+            ),
+            matrix
+        );
+    };
+};
+```
+
+----
+
+Define matrix addition
+
+```cpp
+template <unsigned Rows, unsigned Columns>
+struct Monoid::instance<
+    Matrix<Rows, Columns>, Matrix<Rows, Columns>
+> : Monoid::mcd {
+    template <typename M1, typename M2>
+    static constexpr decltype(auto) plus_impl(M1&& m1, M2&& m2) {
+        return element_wise(plus)(
+            std::forward<M1>(m1),
+            std::forward<M2>(m2)
+        );
+    }
+
+    // ...
+};
+```
+
+----
+
+Define additive identity
+
+```cpp
+template <unsigned Rows, unsigned Columns>
+struct Monoid::instance<
+    Matrix<Rows, Columns>, Matrix<Rows, Columns>
+> : Monoid::mcd {
+    // ...
+
+    static constexpr decltype(auto) zero_impl() {
+        auto zero_row = unpack(range_c<int, 0, Columns>, [](auto ...x) {
+            return row((x, int_<0>)...);
+        });
+        return unpack(range_c<int, 0, Rows>, [=](auto ...x) {
+            return matrix((x, zero_row)...);
+        });
+    }
+};
+```
+
+----
+
+And so on...
+
+TODO: Show complete code; not so bad.
 
 ==============================================================================
 
@@ -668,6 +944,7 @@ using T = decltype(
 
 Note:
 Specifically, explain that I don't care about
+
 1. Deep SFINAE (if I understood well that this is an issue).
 2. Lambdas in symbols with external linkage.
 
