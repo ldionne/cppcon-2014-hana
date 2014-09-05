@@ -33,8 +33,6 @@
 - Case studies
 - What I need from C++1z
 
-<!-- TODO: reduce this; list is too long -->
-
 ==============================================================================
 
 ## Why metaprogram?
@@ -401,7 +399,7 @@ Applicative, Monad, Traversable, etc..
 
 ## Type/value unification
 
-----
+====================
 
 ### Type to value
 
@@ -417,7 +415,7 @@ type_wrapper<T> type{};
 auto the_int_type = type<int>;
 ```
 
-----
+====================
 
 ### Value to type
 
@@ -430,7 +428,7 @@ struct type_wrapper {
 using the_real_int_type = decltype(the_int_type)::type;
 ```
 
-----
+====================
 
 ### Metafunctions become functions!
 
@@ -441,7 +439,7 @@ auto add_pointer = [](auto t) {
 };
 ```
 
-----
+====================
 
 ### The generic lifting process
 
@@ -511,16 +509,14 @@ static_assert(std::is_same<
 ### Loop unrolling revisited
 
 ```cpp
-auto unroll = [](auto n, auto&& f) {
-    boost::hana::for_each(boost::hana::range(boost::hana::int_<0>, n),
-        [f(std::forward<decltype(f)>(f))](auto i) { f(); }
-    );
+auto unroll = [](auto n, auto f) {
+    for_each(range(int_<0>, n), [=](auto i) { f(); });
 };
 
 void f(); // can't be inlined
 
 int main() {
-    unroll(boost::hana::int_<10>, f);
+    unroll(int_<10>, f);
 }
 ```
 
@@ -550,7 +546,144 @@ _main:
 
 ### Expression templates revisited
 
-TODO
+Define how to create leafs (terminals)
+
+```cpp
+template <typename X>
+struct terminal_type {
+    X value;
+};
+
+auto terminal = [](auto x) {
+    return terminal_type<decltype(x)>(x);
+};
+```
+
+----
+
+Define how to create nodes representing function application
+
+```cpp
+template <typename F, typename ...Args>
+struct function_type {
+    F value;
+    using Storage = decltype(tuple(std::declval<Args>()...));
+    Storage args;
+
+    explicit constexpr function_type(F f, Args ...a)
+        : value(f), args(tuple(a...))
+    { }
+};
+
+auto function = [](auto f, auto ...args) {
+    return function_type<decltype(f), decltype(args)...>(f, args...);
+};
+```
+
+----
+
+Define operator overloads
+
+```cpp
+struct plus_tag {
+    template <typename T, typename U>
+    constexpr auto operator()(T t, U u) const
+    { return t + u; }
+};
+
+template <typename T, typename U, typename = std::enable_if_t<
+    /* T and U wants to be treeified */
+>>
+constexpr auto operator +(T t, U u) {
+    return function(plus_tag{}, t, u);
+}
+
+// and so on...
+```
+
+----
+
+Define your `Matrix` type
+
+```cpp
+struct Matrix {
+    // storage[i][j] means the (i,j)th element in the matrix.
+    using Row = std::vector<int>;
+    std::vector<Row> storage;
+
+    auto operator[](std::pair<int, int> index) const
+    { return storage[index.first][index.second]; }
+};
+```
+
+----
+
+Define how to evaluate a terminal
+
+```cpp
+struct eval {
+    template <typename X>
+    constexpr auto operator()(terminal_type<X> x) const
+    { return x.value; }
+
+    // ...
+};
+```
+
+----
+
+Define how to evaluate a function application node
+
+```cpp
+struct eval {
+    // ...
+
+    template <typename F, typename ...Args>
+    constexpr auto operator()(function_type<F, Args...> f) const
+    { return unpack(fmap(f.args, *this), f.value); }
+
+    // ...
+};
+```
+
+----
+
+Define how to evaluate a subscripted matrix sum
+
+```cpp
+struct eval {
+    // ...
+
+    template <typename I, typename M1, typename M2>
+    constexpr auto operator()(
+        function_type<subscript_tag,
+            function_type<plus_tag, M1, M2>,
+            terminal_type<I>
+        > expr
+    ) const {
+        auto index = expr.args[1_c];
+        return (*this)(expr.args[0_c].args[0_c][index]) +
+               (*this)(expr.args[0_c].args[1_c][index]);
+    }
+};
+```
+
+----
+
+Impress
+
+```cpp
+Matrix m1{{{1, 2},
+           {3, 4}}};
+
+Matrix m2{{{5, 6},
+           {7, 8}}};
+
+auto expr = (terminal(m1) + terminal(m2))[
+    terminal(std::make_pair(1, 0))
+];
+assert(eval(expr) == 3 + 7);
+```
 
 ====================
 
@@ -609,7 +742,7 @@ static_assert(std::is_same<
 
 ====================
 
-### Heterogeneous matrices
+### Heterogeneous linear algebra
 
 First, define how a matrix is represented
 
@@ -627,9 +760,7 @@ struct matrix_type {
     // ...
 };
 
-auto rows = [](auto&& m) -> decltype(auto) {
-    return std::forward<decltype(m)>(m).rows_;
-};
+auto rows = [](auto m) { return m.rows_; };
 ```
 
 ----
@@ -639,13 +770,13 @@ Then, define how a matrix is created
 ```cpp
 auto row = tuple;
 
-auto matrix = [](auto&& ...rows) -> decltype(auto) {
-    auto storage = tuple(std::forward<decltype(rows)>(rows)...);
+auto matrix = [](auto ...rows) {
+    auto storage = tuple(rows...);
     auto ncolumns = length(head(storage));
 
     return matrix_type<
         sizeof...(rows), value(ncolumns), decltype(storage)
-    >{std::move(storage)};
+    >{storage};
 };
 
 // Now use like:
@@ -660,12 +791,10 @@ auto m = matrix(
 Define element-wise operations
 
 ```cpp
-auto element_wise = [](auto&& f) -> decltype(auto) {
-    return [f(std::forward<decltype(f)>(f))](auto&& ...m) -> decltype(auto) {
+auto element_wise = [](auto f) {
+    return [=](auto ...m) {
         return unpack(
-            zip_with(partial(zip_with, f),
-                rows(std::forward<decltype(m)>(m))...
-            ),
+            zip_with(partial(zip_with, f), rows(m)...),
             matrix
         );
     };
@@ -682,11 +811,8 @@ struct Monoid::instance<
     Matrix<Rows, Columns>, Matrix<Rows, Columns>
 > : Monoid::mcd {
     template <typename M1, typename M2>
-    static constexpr decltype(auto) plus_impl(M1&& m1, M2&& m2) {
-        return element_wise(plus)(
-            std::forward<M1>(m1),
-            std::forward<M2>(m2)
-        );
+    static constexpr auto plus_impl(M1 m1, M2 m2) {
+        return element_wise(plus)(m1, m2);
     }
 
     // ...
@@ -704,7 +830,7 @@ struct Monoid::instance<
 > : Monoid::mcd {
     // ...
 
-    static constexpr decltype(auto) zero_impl() {
+    static constexpr auto zero_impl() {
         auto zero_row = unpack(range_c<int, 0, Columns>, [](auto ...x) {
             return row((x, int_<0>)...);
         });
@@ -715,11 +841,11 @@ struct Monoid::instance<
 };
 ```
 
+<!-- TODO: The implementation of zero should be easier -->
+
 ----
 
 And so on...
-
-TODO: Show complete code; not so bad.
 
 ==============================================================================
 
@@ -765,6 +891,115 @@ fails on both Clang and GCC.
 
 ====================
 
+`std::tuple_cat`
+
+```cpp
+template <typename Xs, typename Ys>
+/* constexpr */ auto tuple_cat(Xs xs, Ys ys) {
+    return xs.unpack_into([=](auto ...x) {
+        return ys.unpack_into([=](auto ...y) {
+            return make_tuple(x..., y...);
+        });
+    });
+}
+```
+
+Note:
+Perfect forwarding left out for readability, and also because it is very
+tricky to implement.
+
+----
+
+### Time (biased)
+![](code/benchmark/plots/benchmark.tuple_cat.time.png)
+
+----
+
+### Memory usage (biased)
+![](code/benchmark/plots/benchmark.tuple_cat.memusg.png)
+
+----
+
+### Time (unbiased)
+![](code/benchmark/plots/benchmark.tuple_cat.unbiased.time.png)
+
+----
+
+### Memory usage (unbiased)
+![](code/benchmark/plots/benchmark.tuple_cat.unbiased.memusg.png)
+
+====================
+
+### constexpr backend
+
+TODO:
+Show how perform computations on homogeneous sequences using constexpr
+as an optimization.
+
+==============================================================================
+
+## What I need from C++1z
+
+====================
+
+### Constexpr lambdas
+
+```cpp
+constexpr auto inc = [](auto x) {
+    return x + 1;
+};
+
+static_assert(inc(1) == 2, "");
+```
+
+====================
+
+### Lambdas in some unevaluated contexts
+
+```cpp
+using T = decltype(
+    head(
+        fmap(tuple(type<int>, type<char>, type<float>), [](auto t) {
+            return type<typename decltype(t)::type**>;
+        })
+    )
+)::type;
+```
+
+Note:
+Specifically, explain that I don't care about
+
+1. Deep SFINAE (if I understood well that this is an issue).
+2. Lambdas in symbols with external linkage.
+
+====================
+
+### Better handling of parameter packs in captures
+
+```cpp
+auto f = [](auto ...x) {
+    auto g = [y(x)...] {
+        // y should be a parameter pack
+    };
+};
+```
+
+====================
+
+# Thank you
+
+<span class="fragment fade-in" data-fragment-index="1">
+http://ldionne.com <br>
+http://github.com/ldionne
+</span>
+
+====================
+
+## Bonus
+(more TMP hacks)
+
+====================
+
 `std::get`
 
 ```cpp
@@ -806,45 +1041,6 @@ template <std::size_t n, typename Tuple>
 
 ### Memory usage (unbiased)
 ![](code/benchmark/plots/benchmark.get.unbiased.memusg.png)
-
-====================
-
-`std::tuple_cat`
-
-```cpp
-template <typename Xs, typename Ys>
-/* constexpr */ auto tuple_cat(Xs xs, Ys ys) {
-    return xs.unpack_into([=](auto ...x) {
-        return ys.unpack_into([=](auto ...y) {
-            return make_tuple(x..., y...);
-        });
-    });
-}
-```
-
-Note:
-Perfect forwarding left out for readability, and also because it is very
-tricky to implement.
-
-----
-
-### Time (biased)
-![](code/benchmark/plots/benchmark.tuple_cat.time.png)
-
-----
-
-### Memory usage (biased)
-![](code/benchmark/plots/benchmark.tuple_cat.memusg.png)
-
-----
-
-### Time (unbiased)
-![](code/benchmark/plots/benchmark.tuple_cat.unbiased.time.png)
-
-----
-
-### Memory usage (unbiased)
-![](code/benchmark/plots/benchmark.tuple_cat.unbiased.memusg.png)
 
 ====================
 
@@ -912,62 +1108,9 @@ template <typename Tuple, typename F>
 ### Memory usage (unbiased)
 ![](code/benchmark/plots/benchmark.tuple_transform.unbiased.memusg.png)
 
-==============================================================================
-
-## What I need from C++1z
-
 ====================
 
-### Constexpr lambdas
-
-```cpp
-constexpr auto inc = [](auto x) {
-    return x + 1;
-};
-
-static_assert(inc(1) == 2, "");
-```
-
-====================
-
-### Lambdas in some unevaluated contexts
-
-```cpp
-using T = decltype(
-    head(
-        fmap(tuple(type<int>, type<char>, type<float>), [](auto t) {
-            return type<typename decltype(t)::type**>;
-        })
-    )
-)::type;
-```
-
-Note:
-Specifically, explain that I don't care about
-
-1. Deep SFINAE (if I understood well that this is an issue).
-2. Lambdas in symbols with external linkage.
-
-====================
-
-### Better handling of parameter packs in captures
-
-```cpp
-auto f = [](auto ...x) {
-    auto g = [y(x)...] {
-        // y should be a parameter pack
-    };
-};
-```
-
-====================
-
-# Thank you
-
-<span class="fragment fade-in" data-fragment-index="1">
-http://ldionne.com <br>
-http://github.com/ldionne
-</span>
+## That's it!
 
             </script>
             </section>
