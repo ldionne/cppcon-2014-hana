@@ -37,4 +37,10 @@ int main() {
         get<3>(cat) == nullptr &&
         get<4>(cat) == 5
     );
+
+    // front
+    {
+        auto t = make_tuple(1, '2', 3.3);
+        assert(front(t) == 1);
+    }
 }

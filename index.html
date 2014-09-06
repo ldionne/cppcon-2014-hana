@@ -880,6 +880,20 @@ fails on both Clang and GCC.
 
 ----
 
+How does it work?
+
+```cpp
+template <typename Tuple>
+/* constexpr */ decltype(auto) front(Tuple&& ts) {
+    auto fst = [](auto&& x, auto&& ...xs) -> decltype(auto) {
+        return std::forward<decltype(x)>(x);
+    };
+    return std::forward<Tuple>(ts).unpack_into(fst);
+}
+```
+
+----
+
 ### Time
 ![](code/benchmark/plots/benchmark.make_tuple.time.png)
 

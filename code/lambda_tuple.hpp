@@ -112,6 +112,17 @@ template <typename Tuple, typename F>
         }
     );
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// front
+//////////////////////////////////////////////////////////////////////////////
+template <typename Tuple>
+/* constexpr */ decltype(auto) front(Tuple&& ts) {
+    auto fst = [](auto&& x, auto&& ...xs) -> decltype(auto) {
+        return std::forward<decltype(x)>(x);
+    };
+    return std::forward<Tuple>(ts).unpack_into(fst);
+}
 } // end namespace lambda
 
 #endif
