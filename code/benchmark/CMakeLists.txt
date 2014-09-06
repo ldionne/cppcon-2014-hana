@@ -146,7 +146,7 @@ endfunction()
 
 ##############################################################################
 
-foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform)
+foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform tuple_for_each)
     # Biased benchmarks
     boost_hana_add_curve_from_source(benchmark.${operation} lambda_tuple ${operation}.cpp
         "

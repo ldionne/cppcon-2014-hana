@@ -46,6 +46,28 @@ constexpr decltype(auto) tuple_transform(Tuple&& ts, F&& f) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+// hypothetical `std::tuple_for_each`
+//////////////////////////////////////////////////////////////////////////////
+template <typename Tuple, typename F, std::size_t ...i>
+constexpr void tuple_for_each_impl(Tuple&& ts, F f, std::index_sequence<i...>) {
+    using swallow = int[];
+    (void)swallow{1,
+        (f(get<i>(std::forward<Tuple>(ts))), void(), 1)...
+    };
+}
+
+template <typename Tuple, typename F>
+constexpr void tuple_for_each(Tuple&& ts, F&& f) {
+    tuple_for_each_impl(
+        std::forward<Tuple>(ts),
+        std::forward<F>(f),
+        std::make_index_sequence<
+            std::tuple_size<std::decay_t<Tuple>>::value
+        >{}
+    );
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // the proposed C++17 std::apply function
 //////////////////////////////////////////////////////////////////////////////
 template <typename F, typename Tuple, std::size_t ...i>

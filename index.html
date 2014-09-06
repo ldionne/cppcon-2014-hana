@@ -26,7 +26,6 @@
 ====================
 
 ## Outline
-- Why metaprogram?
 - Hana's building blocks
 - Type/value unification
 - Case studies
@@ -941,14 +940,6 @@ tricky to implement.
 ### Memory usage (unbiased)
 ![](code/benchmark/plots/benchmark.tuple_cat.unbiased.memusg.png)
 
-====================
-
-### constexpr backend
-
-TODO:
-Show how perform computations on homogeneous sequences using constexpr
-as an optimization.
-
 ==============================================================================
 
 ## What I need from C++1z
@@ -1122,6 +1113,42 @@ template <typename Tuple, typename F>
 ![](code/benchmark/plots/benchmark.tuple_transform.unbiased.memusg.png)
 
 ====================
+
+An hypothetical `std::tuple_for_each`
+
+```cpp
+template <typename Tuple, typename F>
+/* constexpr */ void tuple_for_each(Tuple&& ts, F&& f) {
+    std::forward<Tuple>(ts).unpack_into(
+        [&](auto&& ...ts) {
+            using swallow = int[];
+            (void)swallow{1,
+                (f(std::forward<decltype(ts)>(ts)), void(), 1)...
+            };
+        }
+    );
+}
+```
+
+----
+
+### Time (biased)
+![](code/benchmark/plots/benchmark.tuple_for_each.time.png)
+
+----
+
+### Memory usage (biased)
+![](code/benchmark/plots/benchmark.tuple_for_each.memusg.png)
+
+----
+
+### Time (unbiased)
+![](code/benchmark/plots/benchmark.tuple_for_each.unbiased.time.png)
+
+----
+
+### Memory usage (unbiased)
+![](code/benchmark/plots/benchmark.tuple_for_each.unbiased.memusg.png)
 
 ## That's it!
 

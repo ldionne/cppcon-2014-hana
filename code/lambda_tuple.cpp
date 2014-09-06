@@ -38,6 +38,13 @@ int main() {
         get<4>(cat) == 5
     );
 
+    // tuple_for_each
+    {
+        tuple_for_each(make_tuple(1, '2', 3.3), [](auto x) {
+
+        });
+    }
+
     // front
     {
         auto t = make_tuple(1, '2', 3.3);

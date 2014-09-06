@@ -114,6 +114,21 @@ template <typename Tuple, typename F>
 }
 
 //////////////////////////////////////////////////////////////////////////////
+// hypothetical `std::tuple_for_each`
+//////////////////////////////////////////////////////////////////////////////
+template <typename Tuple, typename F>
+/* constexpr */ void tuple_for_each(Tuple&& ts, F&& f) {
+    std::forward<Tuple>(ts).unpack_into(
+        [&](auto&& ...ts) {
+            using swallow = int[];
+            (void)swallow{1,
+                (f(std::forward<decltype(ts)>(ts)), void(), 1)...
+            };
+        }
+    );
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // front
 //////////////////////////////////////////////////////////////////////////////
 template <typename Tuple>
