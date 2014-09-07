@@ -23,169 +23,110 @@ int main() {
     // Foldable
     //////////////////////////////////////////////////////////////////////////
     {
-        //////////////////
-        // Tuple
-        //////////////////
-        {
-            auto xs = tuple(1, '2', 3.3, std::string{"foo"});
+        auto string_cat = [](auto str, auto x) {
+            return "(" + str + " + " +  to_s(x) + ")";
+        };
 
-            assert(foldl(xs, std::string{"x"}, [](auto str, auto x) {
-                return "(" + str + " + " +  to_s(x) + ")";
-            }) == "((((x + 1) + 2) + 3.3) + foo)");
+        auto is_even = [](auto x) {
+            return x % int_<2> == int_<0>;
+        };
 
-            assert(unpack(xs, [](int a, char b, double c, std::string d) {
-                return to_s(a) + " " + to_s(b) + " " + to_s(c) + " " + d;
-            }) == "1 2 3.3 foo");
+        auto string_cat2 = [](int a, char b, double c, std::string d) {
+            return to_s(a) + " " + to_s(b) + " " + to_s(c) + " " + d;
+        };
 
-            assert(count(xs, [](auto x) {
-                return std::is_floating_point<decltype(x)>{};
-            }) == 1);
-        }
 
-        //////////////////
-        // Maybe
-        //////////////////
-        {
-            assert(unpack(nothing, []() { return 0; }) == 0);
-            assert(unpack(just('x'), [](auto x) { return x; }) == 'x');
+        auto xs = tuple(1, '2', 3.3, std::string{"foo"});
 
-            assert(sum(just(1)) == 1);
-            assert(sum(nothing) == 0);
+        assert(foldl(xs, std::string{"x"}, string_cat) ==
+            "((((x + 1) + 2) + 3.3) + foo)"
+        );
 
-            assert(length(nothing) == 0);
-            assert(length(just(nullptr)) == 1);
-        }
+        assert(unpack(xs, string_cat2) == "1 2 3.3 foo");
+
+        assert(count(range(int_<0>, int_<10>), is_even) == int_<5>);
+
+        assert(sum(just(1)) == 1);
+        assert(sum(nothing) == int_<0>);
+
+        assert(length(nothing) == int_<0>);
+        assert(length(just(nullptr)) == int_<1>);
     }
 
     //////////////////////////////////////////////////////////////////////////
     // Iterable
     //////////////////////////////////////////////////////////////////////////
     {
-        //////////////////
-        // Tuple
-        //////////////////
-        {
-            auto xs = tuple(1, '2', 3.3, std::string{"foo"});
+        auto xs = tuple(1, '2', 3.3, std::string{"foo"});
+        auto r = range_c<int, 10, 20>;
 
-            assert(head(xs) == 1);
+        assert(head(xs) == 1);
+        assert(last(xs) == "foo");
+        assert(at_c<2>(xs) == 3.3);
+        assert(drop_until(xs, trait_<std::is_floating_point>) == tuple(3.3, "foo"));
 
-            assert(last(xs) == "foo");
-
-            assert(at_c<2>(xs) == 3.3);
-
-            assert(drop_until(xs, [](auto x) {
-                return std::is_floating_point<decltype(x)>{};
-            }) == tuple(3.3, "foo"));
-        }
-
-        //////////////////
-        // Range
-        //////////////////
-        {
-            auto r = range_c<int, 10, 20>;
-
-            assert((tail(r) == range_c<int, 11, 20>));
-
-            assert((drop_c<3>(r) == range_c<int, 13, 20>));
-
-            using namespace literals;
-            assert((drop_while(r, _ < 15_c) == range_c<int, 15, 20>));
-        }
+        assert((tail(r) == range_c<int, 11, 20>));
+        assert((drop_c<3>(r) == range_c<int, 13, 20>));
+        assert((drop_while(r, _ < int_<15>) == range_c<int, 15, 20>));
     }
 
     //////////////////////////////////////////////////////////////////////////
     // Searchable
     //////////////////////////////////////////////////////////////////////////
     {
-        //////////////////
-        // Tuple
-        //////////////////
-        {
-            auto xs = tuple(1, '2', 3.3, std::string{"foo"});
+        auto xs = tuple(1, '2', 3.3, std::string{"foo"});
+        auto ys = map(
+            pair(type<float>, 4),
+            pair(int_<1>, std::string{"foo"})
+        );
+        auto zs = set(int_<1>, type<char>, 3.3, std::string{"foo"});
 
-            assert(find(xs, [](auto x) {
-                return std::is_floating_point<decltype(x)>{};
-            }) == just(3.3));
+        assert(find(xs, trait_<std::is_floating_point>) == just(3.3));
+        assert(subset(tuple('2', "foo"), xs));
 
-            assert(subset(tuple('2', "foo"), xs));
+        assert(lookup(ys, type<float>) == just(4));
+        assert(lookup(ys, type<char>) == nothing);
+        assert(elem(ys, int_<1>));
 
-            assert(any(xs, [](auto x) {
-                return std::is_floating_point<decltype(x)>{};
-            }));
-
-            assert(3.3 ^in^ xs); // infix application :-)
-        }
-
-        //////////////////
-        // Map
-        //////////////////
-        {
-            auto xs = map(
-                pair(type<float>, 4),
-                pair(int_<1>, std::string{"foo"})
-            );
-
-            assert(lookup(xs, type<float>) == just(4));
-            assert(lookup(xs, type<char>) == nothing);
-
-            assert(elem(xs, int_<1>));
-        }
+        assert(any(zs, trait_<std::is_floating_point>));
+        assert(3.3 ^in^ zs); // infix application :-)
     }
 
     //////////////////////////////////////////////////////////////////////////
     // List
     //////////////////////////////////////////////////////////////////////////
     {
-        //////////////////
-        // Tuple
-        //////////////////
-        {
-            auto xs = tuple(1, '2', 3.3, std::string{"foo"});
+        auto xs = tuple(1, '2', 3.3, std::string{"foo"});
 
-            assert(xs == concat(tuple(1, '2'), tuple(3.3, "foo")));
+        assert(xs == concat(tuple(1, '2'), tuple(3.3, "foo")));
 
-            assert(reverse(xs) == tuple("foo", 3.3, '2', 1));
+        assert(reverse(xs) == tuple("foo", 3.3, '2', 1));
 
-            assert((slice_c<1, 3>(xs) == tuple('2', 3.3)));
+        assert((slice_c<1, 3>(xs) == tuple('2', 3.3)));
 
-            assert(take_until(xs, [](auto x) {
-                return std::is_floating_point<decltype(x)>{};
-            }) == tuple(1, '2'));
-        }
+        assert(take_until(xs, [](auto x) {
+            return std::is_floating_point<decltype(x)>{};
+        }) == tuple(1, '2'));
     }
 
     //////////////////////////////////////////////////////////////////////////
     // Functor
     //////////////////////////////////////////////////////////////////////////
     {
-        //////////////////
-        // Tuple
-        //////////////////
-        {
-            auto xs = tuple(1, 3.3, std::string{"foo"});
+        auto xs = tuple(1, 3.3, std::string{"foo"});
+        auto twice = [](auto x) { return x + x; };
 
-            assert(fmap(xs, [](auto x) {
-                return x + x;
-            }) == tuple(2, 6.6, "foofoo"));
+        assert(fmap(xs, twice) == tuple(2, 6.6, "foofoo"));
 
-            assert(adjust(xs,
-                [](auto x) { return std::is_floating_point<decltype(x)>{}; },
-                [](auto x) { return x + x; }
-            ) == tuple(1, 6.6, "foo"));
-        }
+        assert(adjust(xs, trait_<std::is_floating_point>, twice) ==
+            tuple(1, 6.6, "foo")
+        );
 
-        //////////////////
-        // Maybe
-        //////////////////
-        {
-            assert(replace(just(1.3),
-                [](auto x) { return std::is_floating_point<decltype(x)>{}; },
-                'x'
-            ) == just('x'));
+        assert(replace(just(1.3), trait_<std::is_floating_point>, 'x') ==
+            just('x'));
 
-            assert(fill(just(1.3), 'x') == just('x'));
-            assert(fill(nothing, 'x') == nothing);
-        }
+        assert(fill(just(1.3), 'x') == just('x'));
+        assert(fill(nothing, 'x') == nothing);
     }
 
     //////////////////////////////////////////////////////////////////////////
