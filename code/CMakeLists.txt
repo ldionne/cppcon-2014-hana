@@ -40,6 +40,9 @@ add_test(concepts concepts)
 add_executable(expression_templates expression_templates.cpp)
 add_test(expression_templates expression_templates)
 
+add_executable(integral integral.cpp)
+add_test(integral integral)
+
 add_executable(type_computations type_computations.cpp)
 add_test(type_computations type_computations)
 

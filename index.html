@@ -150,7 +150,56 @@ struct optimize_alignment {
 ## Primer
 (or why `constexpr` won't save us)
 
-<!-- TODO: explain type-dependencies and why `constexpr` is no cigar. at the same time, introduce integral<> -->
+----
+
+Is this code valid?
+
+```cpp
+template <typename T>
+constexpr void assert_positive(T i) {
+    static_assert(i > 0, "");
+}
+
+int main() {
+    constexpr int i = 2;
+    assert_positive(i);
+}
+```
+
+----
+
+How about this?
+
+```cpp
+constexpr void assert_positive(int i) {
+    static_assert(i > 0, "");
+}
+
+int main() {
+    constexpr int i = 2;
+    assert_positive(i);
+}
+```
+
+----
+
+### The return type may only depend on the<br> type of the arguments.
+
+----
+
+### The solution
+
+```cpp
+template <typename T>
+void assert_positive(T i) {
+    static_assert(value(i) > 0, "");
+}
+
+int main() {
+    auto i = integral<int, 2>;
+    assert_positive(i);
+}
+```
 
 ==============================================================================
 
