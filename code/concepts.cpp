@@ -14,37 +14,21 @@
 using namespace boost::hana;
 
 
-auto to_s = [](auto x) {
-    return (std::ostringstream{} << x).str();
-};
-
 int main() {
     //////////////////////////////////////////////////////////////////////////
     // Foldable
     //////////////////////////////////////////////////////////////////////////
     {
-        auto string_cat = [](auto str, auto x) {
-            return "(" + str + " + " +  to_s(x) + ")";
-        };
-
         auto is_even = [](auto x) {
             return x % int_<2> == int_<0>;
         };
 
-        auto string_cat2 = [](int a, char b, double c, std::string d) {
-            return to_s(a) + " " + to_s(b) + " " + to_s(c) + " " + d;
-        };
-
-
-        auto xs = tuple(1, '2', 3.3, std::string{"foo"});
-
-        assert(foldl(xs, std::string{"x"}, string_cat) ==
-            "((((x + 1) + 2) + 3.3) + foo)"
-        );
-
-        assert(unpack(xs, string_cat2) == "1 2 3.3 foo");
+        assert(unpack(tuple(1, '2', 3.3, std::string{"foo"}), [](auto ...xs) {
+            return size_t<sizeof...(xs)>;
+        }) == size_t<4>);
 
         assert(count(range(int_<0>, int_<10>), is_even) == int_<5>);
+        assert(foldl(range(int_<1>, int_<5>), int_<1>, _ * _) == int_<120>);
 
         assert(sum(just(1)) == 1);
         assert(sum(nothing) == int_<0>);
@@ -63,7 +47,9 @@ int main() {
         assert(head(xs) == 1);
         assert(last(xs) == "foo");
         assert(at_c<2>(xs) == 3.3);
-        assert(drop_until(xs, trait_<std::is_floating_point>) == tuple(3.3, "foo"));
+        assert(drop_until(xs, trait_<std::is_floating_point>) ==
+            tuple(3.3, "foo")
+        );
 
         assert((tail(r) == range_c<int, 11, 20>));
         assert((drop_c<3>(r) == range_c<int, 13, 20>));
@@ -104,9 +90,9 @@ int main() {
 
         assert((slice_c<1, 3>(xs) == tuple('2', 3.3)));
 
-        assert(take_until(xs, [](auto x) {
-            return std::is_floating_point<decltype(x)>{};
-        }) == tuple(1, '2'));
+        assert(take_until(xs, trait_<std::is_floating_point>) ==
+            tuple(1, '2')
+        );
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -123,7 +109,8 @@ int main() {
         );
 
         assert(replace(just(1.3), trait_<std::is_floating_point>, 'x') ==
-            just('x'));
+            just('x')
+        );
 
         assert(fill(just(1.3), 'x') == just('x'));
         assert(fill(nothing, 'x') == nothing);
