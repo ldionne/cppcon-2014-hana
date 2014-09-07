@@ -1,4 +1,5 @@
 
+#include "../fusion_vector.hpp"
 #include "../lambda_tuple.hpp"
 #include "../std_tuple.hpp"
 
@@ -10,7 +11,11 @@ struct x { };
 
 int main() {
     <% if no_bias %>
-        other::make_tuple(
+        other1::make_tuple(
+            <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
+        );
+
+        other2::make_tuple(
             <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
         );
     <% end %>

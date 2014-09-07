@@ -1,4 +1,5 @@
 
+#include "../fusion_vector.hpp"
 #include "../lambda_tuple.hpp"
 #include "../std_tuple.hpp"
 
