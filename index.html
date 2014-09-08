@@ -321,7 +321,7 @@ assert(unpack(tuple(1, '2', 3.3, std::string{"foo"}), [](auto ...xs) {
 }) == size_t<4>);
 
 assert(count(range(int_<0>, int_<10>), is_even) == int_<5>);
-assert(foldl(range(int_<1>, int_<5>), int_<1>, _ * _) == int_<120>);
+assert(foldl(range(int_<1>, int_<5>), int_<1>, _ * _) == int_<24>);
 
 assert(sum(just(1)) == 1);
 assert(sum(nothing) == int_<0>);
