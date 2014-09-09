@@ -160,3 +160,9 @@ foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform tuple_
         )
     endforeach()
 endforeach()
+
+foreach(technique IN ITEMS naive single multi any)
+    boost_hana_add_curve_from_source(benchmark.elem ${technique} elem/${technique}.cpp
+        "((0..50).to_a + (51..500).step(25).to_a).map { |n| { x: n, n:n } }"
+    )
+endforeach()
