@@ -46,6 +46,9 @@ add_test(integral integral)
 add_executable(type_computations type_computations.cpp)
 add_test(type_computations type_computations)
 
+add_executable(record record.cpp)
+add_test(record record)
+
 if (${Boost_FOUND})
     add_executable(type_value_unification type_value_unification.cpp)
     add_test(type_value_unification type_value_unification)

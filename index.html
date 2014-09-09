@@ -111,6 +111,7 @@ struct optimize_alignment {
 
 - Compile-time task ordering/parallelization
 - Dimensional analysis
+- Introspection
 - etc...
 
 ====================
@@ -415,6 +416,27 @@ assert(replace(just(1.3), trait_<std::is_floating_point>, 'x') ==
 
 assert(fill(just(1.3), 'x') == just('x'));
 assert(fill(nothing, 'x') == nothing);
+```
+
+====================
+
+### Record
+
+User-defined data structures
+
+```cpp
+auto name = decltype_([]{});
+auto age = decltype_([]{});
+
+struct Person {
+    BOOST_HANA_DEFINE_RECORD_INTRUSIVE(Person,
+        ((::name)(std::string)(name))
+        ((::age)(int)(age))
+    );
+};
+
+Person louis{"Louis", 22};
+assert(lookup(louis, name) == just("Louis"));
 ```
 
 ====================
