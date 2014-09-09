@@ -430,8 +430,8 @@ auto age = decltype_([]{});
 
 struct Person {
     BOOST_HANA_DEFINE_RECORD_INTRUSIVE(Person,
-        ((::name)(std::string)(name))
-        ((::age)(int)(age))
+        (::name, (std::string, name))
+        (::age, (int, age))
     );
 };
 
@@ -933,7 +933,7 @@ tricky to implement.
 
 ----
 
-### Note: Benchmarks are somewhat biased
+### Benchmarks are somewhat biased
 
 ----
 
