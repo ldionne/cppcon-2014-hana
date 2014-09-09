@@ -4,6 +4,7 @@
 #ifndef FUSION_VECTOR_HPP
 #define FUSION_VECTOR_HPP
 
+#define FUSION_MAX_VECTOR_SIZE 50
 #include <boost/fusion/include/at_c.hpp>
 #include <boost/fusion/include/for_each.hpp>
 #include <boost/fusion/include/join.hpp>
