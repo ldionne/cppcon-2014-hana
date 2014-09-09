@@ -5,8 +5,6 @@
 #include <cassert>
 
 
-using namespace lambda;
-
 int main() {
     // tuple
     tuple<int, char, double> ts{1, '2', 3.3};

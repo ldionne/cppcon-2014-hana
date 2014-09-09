@@ -31,23 +31,10 @@ include_directories(hana/include)
 #=============================================================================
 enable_testing()
 
-add_executable(lambda_tuple lambda_tuple.cpp)
-add_test(lambda_tuple lambda_tuple)
-
-add_executable(concepts concepts.cpp)
-add_test(concepts concepts)
-
-add_executable(expression_templates expression_templates.cpp)
-add_test(expression_templates expression_templates)
-
-add_executable(integral integral.cpp)
-add_test(integral integral)
-
-add_executable(type_computations type_computations.cpp)
-add_test(type_computations type_computations)
-
-add_executable(record record.cpp)
-add_test(record record)
+foreach(file IN ITEMS lambda_tuple concepts expression_templates integral type_computations record)
+    add_executable(${file} ${file}.cpp)
+    add_test(${file} ${file})
+endforeach()
 
 if (${Boost_FOUND})
     add_executable(type_value_unification type_value_unification.cpp)

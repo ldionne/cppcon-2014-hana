@@ -9,7 +9,6 @@
 #include <utility>
 
 
-namespace lambda {
 //////////////////////////////////////////////////////////////////////////////
 // std::tuple and std::make_tuple
 //////////////////////////////////////////////////////////////////////////////
@@ -138,6 +137,5 @@ template <typename Tuple>
     };
     return std::forward<Tuple>(ts).unpack_into(fst);
 }
-} // end namespace lambda
 
 #endif

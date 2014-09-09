@@ -16,7 +16,6 @@
 #include <utility>
 
 
-namespace fusion {
 //////////////////////////////////////////////////////////////////////////////
 // std::tuple and std::make_tuple
 //////////////////////////////////////////////////////////////////////////////
@@ -84,6 +83,5 @@ template <typename Tuple, typename F>
 constexpr void tuple_for_each(Tuple&& ts, F&& f) {
     boost::fusion::for_each(std::forward<Tuple>(ts), std::forward<F>(f));
 }
-} // end namespace lambda
 
 #endif

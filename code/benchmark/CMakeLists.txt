@@ -145,61 +145,15 @@ function(boost_hana_add_curve_from_dataset plot_name dataset_name)
 endfunction()
 
 ##############################################################################
-
 foreach(operation IN ITEMS apply get make_tuple tuple_cat tuple_transform tuple_for_each)
-    foreach(no_bias IN ITEMS "true" "false")
-        if(${no_bias} STREQUAL "true")
-            set(suffix ".unbiased")
-        else()
-            set(suffix "")
-        endif()
-
-        boost_hana_add_curve_from_source(benchmark.${operation}${suffix} lambda_tuple ${operation}.cpp
+    foreach(technique IN ITEMS lambda_tuple std_tuple fusion_vector)
+        boost_hana_add_curve_from_source(benchmark.${operation} ${technique} ${operation}.cpp
             "
             ((0..50).to_a + (51..500).step(25).to_a).map { |n|
                 {
-                    setup: \"
-                        namespace benchmark = lambda;
-                        namespace other1 = standard;
-                        namespace other2 = fusion;
-                    \",
+                    technique: \"${technique}\",
                     n_elements: n,
-                    x: n,
-                    no_bias: ${no_bias}
-                }
-            }
-            "
-        )
-
-        boost_hana_add_curve_from_source(benchmark.${operation}${suffix} std_tuple ${operation}.cpp
-            "
-            ((0..50).to_a + (51..500).step(25).to_a).map { |n|
-                {
-                    setup: \"
-                        namespace benchmark = standard;
-                        namespace other1 = lambda;
-                        namespace other2 = fusion;
-                    \",
-                    n_elements: n,
-                    x: n,
-                    no_bias: ${no_bias}
-                }
-            }
-            "
-        )
-
-        boost_hana_add_curve_from_source(benchmark.${operation}${suffix} fusion_vector ${operation}.cpp
-            "
-            ((0..50).to_a + (51..500).step(25).to_a).map { |n|
-                {
-                    setup: \"
-                        namespace benchmark = fusion;
-                        namespace other1 = lambda;
-                        namespace other2 = standard;
-                    \",
-                    n_elements: n,
-                    x: n,
-                    no_bias: ${no_bias}
+                    x: n
                 }
             }
             "

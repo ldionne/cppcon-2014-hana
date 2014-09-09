@@ -1,33 +1,18 @@
+// Copyright Louis Dionne 2014
+// Distributed under the Boost Software License, Version 1.0.
 
-#include "../fusion_vector.hpp"
-#include "../lambda_tuple.hpp"
-#include "../std_tuple.hpp"
-
-<%= setup %>
+#include "../<%=technique%>.hpp"
 
 
 template <int i>
 struct x { };
 
 int main() {
-    <% if no_bias %>
-        other1::make_tuple(
-            <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
-        );
-
-        other2::make_tuple(
-            <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
-        );
-    <% end %>
-
-    auto xs = benchmark::make_tuple(
+    auto xs = make_tuple(
         <%= (1..n_elements).to_a.map{ |i| "x<#{i}>{}" }.join(',') %>
     );
 
     <% 10.times do %>
-    {
-        auto f = [](auto ...x) { };
-        benchmark::apply(f, xs);
-    }
+        apply([](auto ...x) { }, xs);
     <% end %>
 }
