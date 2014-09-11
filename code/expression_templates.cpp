@@ -137,9 +137,10 @@ constexpr struct matrix_evaluator : evaluator<matrix_evaluator> {
             terminal_type<Index>
         > expr
     ) const {
+        auto sum = expr.args[0_c];
         auto index = expr.args[1_c];
-        return (*this)(expr.args[0_c].args[0_c][index]) +
-               (*this)(expr.args[0_c].args[1_c][index]);
+        return (*this)(sum.args[0_c][index]) +
+               (*this)(sum.args[1_c][index]);
     }
 
     using evaluator<matrix_evaluator>::operator();

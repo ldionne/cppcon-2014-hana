@@ -51,32 +51,6 @@ to be expanded at compile-time
 
 ====================
 
-### Expression templates
-
-We build a tree out of a C++ expression
-
-```cpp
-Matrix a = ...;
-Matrix b = ...;
-
-auto sum = a + b;  // returns a lazy expression; nothing computed yet
-```
-
-----
-
-... and then perform domain-specific optimizations at compile-time by
-modifying that tree.
-
-```cpp
-int i = sum[3][5]; // only computes a[3][5] + b[3][5]
-```
-
-----
-
-### Good luck implementing that from scratch
-
-====================
-
 ### Type computations
 
 Typically, given a sequence of types, we want to
@@ -104,6 +78,32 @@ struct optimize_alignment {
     */;
 };
 ```
+
+====================
+
+### Expression templates
+
+We build a tree out of a C++ expression
+
+```cpp
+Matrix a = ...;
+Matrix b = ...;
+
+auto sum = a + b;  // returns a lazy expression; nothing computed yet
+```
+
+----
+
+... and then perform domain-specific optimizations at compile-time by
+modifying that tree.
+
+```cpp
+int i = sum[3][5]; // only computes a[3][5] + b[3][5]
+```
+
+----
+
+### Good luck implementing that from scratch
 
 ====================
 
@@ -191,15 +191,24 @@ int main() {
 ### The solution
 
 ```cpp
-template <typename T>
-void assert_positive(T i) {
-    static_assert(value(i) > 0, "");
+template <typename I>
+void assert_positive(I) {
+    static_assert(I::value > 0, "");
 }
 
 int main() {
-    auto i = integral<int, 2>;
+    auto i = std::integral_constant<int, 2>{};
     assert_positive(i);
 }
+```
+
+----
+
+### Integral
+
+```cpp
+BOOST_HANA_CONSTANT_ASSERT(int_<1> + int_<2> == int_<3>);
+assert_positive(int_<5> - int_<2>);
 ```
 
 ==============================================================================
@@ -553,6 +562,61 @@ _main:
 
 ====================
 
+### Type computations revisited
+
+Find out the smallest type
+
+```cpp
+template <typename ...T>
+using smallest = decltype(
+    minimum_by(ordering(sizeof_), tuple(type<T>...))
+);
+
+template <int i>
+struct storage { char s[i]; };
+
+static_assert(std::is_same<
+    smallest<storage<3>, storage<1>, storage<2>>::type,
+    storage<1>
+>::value, "");
+```
+
+----
+
+Determine the optimal order to minimize alignment
+
+```cpp
+template <typename ...T>
+auto optimize_alignment = sort_by(
+    greater ^on^ trait<std::alignment_of>, tuple(type<T>...)
+);
+
+BOOST_HANA_CONSTANT_ASSERT(
+    optimize_alignment<int, char, long double>
+    ==
+    tuple(type<long double>, type<int>, type<char>)
+);
+```
+
+----
+
+... and eventually do something useful with those types
+
+```cpp
+using OptimalTuple = decltype(
+    unpack(
+        optimize_alignment<int, char, long double>,
+        template_<std::tuple>
+    )
+)::type;
+
+static_assert(std::is_same<
+    OptimalTuple, std::tuple<long double, int, char>
+>::value, "");
+```
+
+====================
+
 ### Expression templates revisited
 
 Represent leaves (usual objects)
@@ -645,9 +709,10 @@ struct eval {
             terminal_type<Index>
         > expr
     ) const {
+        auto sum = expr.args[0_c];
         auto index = expr.args[1_c];
-        return eval{}(expr.args[0_c].args[0_c][index]) +
-               eval{}(expr.args[0_c].args[1_c][index]);
+        return (*this)(sum.args[0_c][index]) +
+               (*this)(sum.args[1_c][index]);
     }
 };
 ```
@@ -667,61 +732,6 @@ auto expr = (terminal(m1) + terminal(m2))[
     terminal(std::make_pair(1, 0))
 ];
 assert(eval(expr) == 3 + 7);
-```
-
-====================
-
-### Type computations revisited
-
-Find out the smallest type
-
-```cpp
-template <typename ...T>
-using smallest = decltype(
-    minimum_by(ordering(sizeof_), tuple(type<T>...))
-);
-
-template <int i>
-struct storage { char s[i]; };
-
-static_assert(std::is_same<
-    smallest<storage<3>, storage<1>, storage<2>>::type,
-    storage<1>
->::value, "");
-```
-
-----
-
-Determine the optimal order to minimize alignment
-
-```cpp
-template <typename ...T>
-auto optimize_alignment = sort_by(
-    greater ^on^ trait<std::alignment_of>, tuple(type<T>...)
-);
-
-BOOST_HANA_CONSTANT_ASSERT(
-    optimize_alignment<int, char, long double>
-    ==
-    tuple(type<long double>, type<int>, type<char>)
-);
-```
-
-----
-
-... and eventually do something useful with those types
-
-```cpp
-using OptimalTuple = decltype(
-    unpack(
-        optimize_alignment<int, char, long double>,
-        template_<std::tuple>
-    )
-)::type;
-
-static_assert(std::is_same<
-    OptimalTuple, std::tuple<long double, int, char>
->::value, "");
 ```
 
 ====================
