@@ -130,11 +130,11 @@ struct Matrix {
 };
 
 constexpr struct matrix_evaluator : evaluator<matrix_evaluator> {
-    template <typename I, typename M1, typename M2>
+    template <typename Index, typename M1, typename M2>
     constexpr decltype(auto) operator()(
         function_type<subscript_tag,
             function_type<plus_tag, M1, M2>,
-            terminal_type<I>
+            terminal_type<Index>
         > expr
     ) const {
         auto index = expr.args[1_c];

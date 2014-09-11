@@ -555,37 +555,23 @@ _main:
 
 ### Expression templates revisited
 
-Define how to create leaves (terminals)
+Represent leaves (usual objects)
 
 ```cpp
 template <typename X>
 struct terminal_type {
-    X value;
-};
-
-auto terminal = [](auto x) {
-    return terminal_type<decltype(x)>(x);
+    // ...
 };
 ```
 
 ----
 
-Define how to create nodes representing function application
+Represent nodes (function applications)
 
 ```cpp
 template <typename F, typename ...Args>
 struct function_type {
-    F value;
-    using Storage = decltype(tuple(std::declval<Args>()...));
-    Storage args;
-
-    explicit constexpr function_type(F f, Args ...a)
-        : value(f), args(tuple(a...))
-    { }
-};
-
-auto function = [](auto f, auto ...args) {
-    return function_type<decltype(f), decltype(args)...>(f, args...);
+    // ...
 };
 ```
 
@@ -594,20 +580,14 @@ auto function = [](auto f, auto ...args) {
 Define operator overloads
 
 ```cpp
-struct plus_tag {
-    template <typename T, typename U>
-    constexpr auto operator()(T t, U u) const
-    { return t + u; }
-};
-
 template <typename T, typename U, typename = std::enable_if_t<
-    /* T and U wants to be treeified */
+    /* T and U wants to be tree-ified */
 >>
 constexpr auto operator +(T t, U u) {
     return function(plus_tag{}, t, u);
 }
 
-// and so on...
+// etc...
 ```
 
 ----
@@ -616,12 +596,7 @@ Define your `Matrix` type
 
 ```cpp
 struct Matrix {
-    // storage[i][j] means the (i,j)th element in the matrix.
-    using Row = std::vector<int>;
-    std::vector<Row> storage;
-
-    auto operator[](std::pair<int, int> index) const
-    { return storage[index.first][index.second]; }
+    // ...
 };
 ```
 
@@ -649,7 +624,7 @@ struct eval {
 
     template <typename F, typename ...Args>
     constexpr auto operator()(function_type<F, Args...> f) const
-    { return unpack(fmap(f.args, *this), f.value); }
+    { return unpack(fmap(f.args, eval{}), f.value); }
 
     // ...
 };
@@ -663,16 +638,16 @@ Define how to evaluate a subscripted matrix sum
 struct eval {
     // ...
 
-    template <typename I, typename M1, typename M2>
+    template <typename Index, typename M1, typename M2>
     constexpr auto operator()(
         function_type<subscript_tag,
             function_type<plus_tag, M1, M2>,
-            terminal_type<I>
+            terminal_type<Index>
         > expr
     ) const {
         auto index = expr.args[1_c];
-        return (*this)(expr.args[0_c].args[0_c][index]) +
-               (*this)(expr.args[0_c].args[1_c][index]);
+        return eval{}(expr.args[0_c].args[0_c][index]) +
+               eval{}(expr.args[0_c].args[1_c][index]);
     }
 };
 ```
@@ -753,7 +728,7 @@ static_assert(std::is_same<
 
 ### Heterogeneous linear algebra
 
-First, define how a matrix is represented
+Define how to create a matrix
 
 ```cpp
 template <unsigned Rows, unsigned Columns>
@@ -761,38 +736,29 @@ struct Matrix {
     // ...
 };
 
-template <unsigned Rows, unsigned Columns, typename Storage>
-struct matrix_type {
-    using hana_datatype = Matrix<Rows, Columns>;
-    Storage rows_;
-
-    // ...
-};
-
-auto rows = [](auto m) { return m.rows_; };
-```
-
-----
-
-Then, define how a matrix is created
-
-```cpp
 auto row = tuple;
 
 auto matrix = [](auto ...rows) {
-    auto storage = tuple(rows...);
-    auto ncolumns = length(head(storage));
-
-    return matrix_type<
-        sizeof...(rows), value(ncolumns), decltype(storage)
-    >{storage};
+    // ...
 };
 
 // Now use like:
 auto m = matrix(
     row(1,  'x', "foobar"),
-    row(3.3, 4,   5)
+    row(3.3, 4,  5)
 );
+```
+
+----
+
+Define how to access rows
+
+```cpp
+auto rows = [](auto m) {
+    // ...
+};
+
+assert(rows(m)[1_c] == tuple(3.3, 4, 5));
 ```
 
 ----
@@ -812,45 +778,24 @@ auto element_wise = [](auto f) {
 
 ----
 
-Define matrix addition
+Define a `Monoid` on matrices
 
 ```cpp
 template <unsigned Rows, unsigned Columns>
-struct Monoid::instance<
-    Matrix<Rows, Columns>, Matrix<Rows, Columns>
-> : Monoid::mcd {
+struct Monoid::instance<Matrix<Rows, Columns>, Matrix<Rows, Columns>>
+    : Monoid::mcd
+{
     template <typename M1, typename M2>
     static constexpr auto plus_impl(M1 m1, M2 m2) {
         return element_wise(plus)(m1, m2);
     }
 
-    // ...
-};
-```
-
-----
-
-Define additive identity
-
-```cpp
-template <unsigned Rows, unsigned Columns>
-struct Monoid::instance<
-    Matrix<Rows, Columns>, Matrix<Rows, Columns>
-> : Monoid::mcd {
-    // ...
-
     static constexpr auto zero_impl() {
-        auto zero_row = unpack(range_c<int, 0, Columns>, [](auto ...x) {
-            return row((x, int_<0>)...);
-        });
-        return unpack(range_c<int, 0, Rows>, [=](auto ...x) {
-            return matrix((x, zero_row)...);
-        });
+        auto zero_row = repeat(int_<Columns>, int_<0>);
+        return unpack(repeat(int_<Rows>, zero_row), matrix);
     }
 };
 ```
-
-<!-- TODO: The implementation of zero should be easier -->
 
 ----
 
