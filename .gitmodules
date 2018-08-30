@@ -1,4 +1,4 @@
 [submodule "code/hana"]
 	path = code/hana
-	url = http://github.com/ldionne/hana
+	url = http://github.com/boostorg/hana
 	branch = master
